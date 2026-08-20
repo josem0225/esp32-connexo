@@ -1,0 +1,7 @@
+{
+  "name": "nexus-common",
+  "version": "0.1.0",
+  "description": "Codigo compartido para firmware NexusControl: Ethernet, heartbeat, HTTP server, config",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}
