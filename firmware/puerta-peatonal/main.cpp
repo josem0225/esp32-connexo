@@ -4,6 +4,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <HTTPUpdate.h>
 #include "Config.h"
 
 // ============================================================
@@ -35,6 +36,13 @@ static unsigned long relayOffAt = 0;
 
 // --- Boton de salida ---
 static bool lastButtonState = HIGH;  // Pull-up: HIGH = no presionado
+
+// --- OTA (Over-The-Air update via Ethernet) ---
+static bool otaRequested = false;
+static String otaUrl = "";
+static String _otaBody = "";
+static bool _otaParseOk = false;
+static String _otaParseError = "";
 
 // --- HTTP Server (creado en heap, no como global) ---
 static AsyncWebServer* server = nullptr;
@@ -94,6 +102,80 @@ void handleSensor(AsyncWebServerRequest* request) {
     doc["door_state"] = digitalRead(DOOR_SENSOR_PIN) == LOW ? "closed" : "open";
     String response;
     serializeJson(doc, response);
+    request->send(200, "application/json", response);
+}
+
+// --- OTA: descarga firmware por HTTP y reflashea ---
+
+void performOTA() {
+    Serial.println("[OTA] ========================================");
+    Serial.println("[OTA] Descargando firmware desde:");
+    Serial.println("[OTA] " + otaUrl);
+    Serial.println("[OTA] ========================================");
+
+    WiFiClient client;
+    httpUpdate.rebootOnUpdate(true);
+
+    t_httpUpdate_return ret = httpUpdate.update(client, otaUrl);
+
+    switch (ret) {
+        case HTTP_UPDATE_FAILED:
+            Serial.printf("[OTA] FALLO: (%d) %s\n",
+                httpUpdate.getLastError(),
+                httpUpdate.getLastErrorString().c_str());
+            break;
+        case HTTP_UPDATE_NO_UPDATES:
+            Serial.println("[OTA] Sin actualizacion disponible");
+            break;
+        case HTTP_UPDATE_OK:
+            Serial.println("[OTA] Exito — reiniciando...");
+            // El ESP32 reinicia automaticamente
+            break;
+    }
+}
+
+void _otaBodyHandler(AsyncWebServerRequest* request, uint8_t* data,
+                     size_t len, size_t index, size_t total) {
+    if (index == 0) {
+        _otaBody = "";
+        _otaParseOk = false;
+        _otaParseError = "";
+    }
+    _otaBody.concat((char*)data, len);
+
+    if (index + len >= total) {
+        JsonDocument doc;
+        if (deserializeJson(doc, _otaBody) != DeserializationError::Ok) {
+            _otaParseError = "invalid_json";
+            return;
+        }
+        if (!doc["url"].is<String>() || doc["url"].as<String>().length() == 0) {
+            _otaParseError = "url_required";
+            return;
+        }
+        otaUrl = doc["url"].as<String>();
+        _otaParseOk = true;
+    }
+}
+
+void handleOta(AsyncWebServerRequest* request) {
+    if (_otaParseError.length() > 0) {
+        String err = "{\"error\":\"" + _otaParseError + "\"}";
+        request->send(400, "application/json", err);
+        return;
+    }
+    if (!_otaParseOk) {
+        request->send(400, "application/json", "{\"error\":\"no_body\"}");
+        return;
+    }
+    otaRequested = true;
+    JsonDocument resp;
+    resp["success"] = true;
+    resp["message"] = "OTA iniciado, el ESP32 se reiniciara en segundos";
+    resp["url"] = otaUrl;
+    resp["current_version"] = NEXUS_FIRMWARE_VERSION;
+    String response;
+    serializeJson(resp, response);
     request->send(200, "application/json", response);
 }
 
@@ -278,6 +360,7 @@ void startNetworkServices() {
     server->on("/status", HTTP_GET, handleStatus);
     server->on("/open", HTTP_POST, handleOpen);
     server->on("/sensor", HTTP_GET, handleSensor);
+    server->on("/ota", HTTP_POST, handleOta, NULL, _otaBodyHandler);
     server->onNotFound([](AsyncWebServerRequest* r) {
         r->send(404, "application/json", "{\"error\":\"not_found\"}");
     });
@@ -325,6 +408,13 @@ void loop() {
     }
     relayTick();
     checkExitButton();
+
+    // OTA: se ejecuta en loop() porque httpUpdate.update() es bloqueante
+    if (otaRequested) {
+        otaRequested = false;
+        delay(500);  // Dar tiempo a que la respuesta HTTP se envíe
+        performOTA();
+    }
 
     // Heartbeat al Mini-PC cada HEARTBEAT_INTERVAL_MS
     if (servicesStarted && millis() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {

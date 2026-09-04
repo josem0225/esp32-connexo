@@ -6,7 +6,7 @@
 
 // --- Identificacion ---
 #define NEXUS_DEVICE_TYPE     "puerta-peatonal"
-#define NEXUS_FIRMWARE_VERSION "1.0.0"
+#define NEXUS_FIRMWARE_VERSION "1.1.0"
 
 // --- Red ---
 #define NEXUS_USE_DHCP        true     // true = DHCP, false = IP estatica

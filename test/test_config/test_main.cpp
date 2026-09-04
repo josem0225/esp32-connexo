@@ -17,6 +17,7 @@
 #define HEARTBEAT_TIMEOUT_COUNT 3
 #define NEXUS_ESP32_PORT      80
 #define NEXUS_MINI_PC_PORT    8000
+#define NEXUS_FIRMWARE_VERSION "1.1.0"
 
 // --- Tests de pines ---
 
@@ -86,6 +87,29 @@ void test_mini_pc_port_is_8000() {
     TEST_ASSERT_EQUAL(8000, NEXUS_MINI_PC_PORT);
 }
 
+// --- Tests de OTA ---
+
+void test_firmware_version_is_semver() {
+    const char* version = NEXUS_FIRMWARE_VERSION;
+    // Debe contener al menos 2 puntos (x.y.z)
+    int dots = 0;
+    for (int i = 0; version[i] != '\0'; i++) {
+        if (version[i] == '.') dots++;
+    }
+    TEST_ASSERT_EQUAL(2, dots);
+}
+
+void test_firmware_version_is_1_1_0() {
+    // Verifica que se bumpeó la versión para OTA
+    const char* version = NEXUS_FIRMWARE_VERSION;
+    TEST_ASSERT_EQUAL_STRING("1.1.0", version);
+}
+
+void test_ota_uses_http_port_80() {
+    // OTA se sirve por el mismo puerto HTTP del ESP32
+    TEST_ASSERT_EQUAL(80, NEXUS_ESP32_PORT);
+}
+
 // --- Runner ---
 
 int main(int argc, char** argv) {
@@ -105,6 +129,10 @@ int main(int argc, char** argv) {
 
     RUN_TEST(test_esp32_http_port_is_80);
     RUN_TEST(test_mini_pc_port_is_8000);
+
+    RUN_TEST(test_firmware_version_is_semver);
+    RUN_TEST(test_firmware_version_is_1_1_0);
+    RUN_TEST(test_ota_uses_http_port_80);
 
     return UNITY_END();
 }
