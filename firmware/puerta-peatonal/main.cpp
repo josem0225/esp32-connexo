@@ -20,6 +20,10 @@ static bool servicesStarted = false;
 static String deviceMAC = "";
 static String deviceIP = "";
 
+// --- Mini-PC descubierto por mDNS ---
+static String miniPcIP = "";
+static int miniPcPort = NEXUS_MINI_PC_PORT;
+
 // --- Heartbeat ---
 static unsigned long lastHeartbeat = 0;
 static int heartbeatFailures = 0;
@@ -124,6 +128,62 @@ void onEthEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     }
 }
 
+// --- Descubrimiento mDNS del Mini-PC ---
+
+String getMiniPcBaseUrl() {
+    if (miniPcIP.length() > 0) {
+        return String("http://") + miniPcIP + ":" + miniPcPort;
+    }
+    return String("http://") + NEXUS_MINI_PC_IP + ":" + NEXUS_MINI_PC_PORT;
+}
+
+void discoverMiniPc() {
+    Serial.println("[mDNS] Buscando Mini-PC (_nexusminipc._tcp)...");
+    int n = MDNS.queryService("_nexusminipc", "_tcp");
+    if (n > 0) {
+        miniPcIP = MDNS.IP(0).toString();
+        miniPcPort = MDNS.port(0);
+        Serial.print("[mDNS] Mini-PC encontrado: ");
+        Serial.print(miniPcIP);
+        Serial.print(":");
+        Serial.println(miniPcPort);
+    } else {
+        Serial.print("[mDNS] No encontrado, usando fallback: ");
+        Serial.println(NEXUS_MINI_PC_IP);
+    }
+}
+
+// --- Notificar al Mini-PC que se abrio por boton de salida ---
+
+void sendExitEvent() {
+    if (!ethHasIP) return;
+
+    HTTPClient http;
+    String url = getMiniPcBaseUrl() + "/api/esp32/exit-event";
+
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(3000);
+
+    JsonDocument doc;
+    doc["esp32_id"] = deviceMAC;
+    doc["event"] = "exit_button";
+
+    String body;
+    serializeJson(doc, body);
+
+    int httpCode = http.POST(body);
+    http.end();
+
+    if (httpCode == 200) {
+        Serial.println("[BTN] Mini-PC notificado (exit_button)");
+    } else {
+        Serial.print("[BTN] Mini-PC no respondio (HTTP ");
+        Serial.print(httpCode);
+        Serial.println(") — best-effort, puerta ya abrio");
+    }
+}
+
 // --- Boton de salida (GPIO14, pull-up, LOW = presionado) ---
 
 void checkExitButton() {
@@ -133,6 +193,7 @@ void checkExitButton() {
         if (!relayActive) {
             Serial.println("[BTN] Boton de salida presionado — abriendo puerta");
             relayActivate();
+            sendExitEvent();
         }
     }
     lastButtonState = currentState;
@@ -144,7 +205,7 @@ void sendHeartbeat() {
     if (!ethHasIP) return;
 
     HTTPClient http;
-    String url = String("http://") + NEXUS_MINI_PC_IP + ":" + NEXUS_MINI_PC_PORT + "/api/esp32/status";
+    String url = getMiniPcBaseUrl() + "/api/esp32/status";
 
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
@@ -184,6 +245,8 @@ void sendHeartbeat() {
         if (heartbeatFailures >= HEARTBEAT_TIMEOUT_COUNT && !fallbackMode) {
             fallbackMode = true;
             Serial.println("[HB] === MODO FALLBACK ACTIVADO ===");
+            // Re-descubrir Mini-PC por si cambió de IP
+            discoverMiniPc();
         }
     }
 }
@@ -221,6 +284,9 @@ void startNetworkServices() {
     server->begin();
     Serial.print("[HTTP] Puerto ");
     Serial.println(NEXUS_ESP32_PORT);
+
+    // Descubrir Mini-PC por mDNS (sin IP hardcodeada)
+    discoverMiniPc();
 
     servicesStarted = true;
     Serial.println("\n===== LISTO =====");

@@ -10,7 +10,7 @@
 
 // --- Red ---
 #define NEXUS_USE_DHCP        true     // true = DHCP, false = IP estatica
-#define NEXUS_MINI_PC_IP      "192.168.0.162"
+#define NEXUS_MINI_PC_IP      "192.168.2.19"
 #define NEXUS_MINI_PC_PORT    8000
 #define NEXUS_ESP32_PORT      80
 
