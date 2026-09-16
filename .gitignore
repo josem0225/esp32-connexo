@@ -8,3 +8,8 @@
 *.map
 __pycache__/
 .DS_Store
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
