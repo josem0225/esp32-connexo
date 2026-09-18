@@ -13,3 +13,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# connexo-landing vive en su propio repositorio (github.com/josem0225/connexo-landing).
+# No pertenece a este proyecto y nunca debe entrar en sus commits.
+connexo-landing/
