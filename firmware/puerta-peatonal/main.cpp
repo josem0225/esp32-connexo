@@ -5,13 +5,21 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+#include <esp_system.h>
 #include "Config.h"
+#include "ReleTemporizado.h"
+#include "BusquedaDelBox.h"
+#include "MedidorDeLoop.h"
 
 // ============================================================
 // NexusControl — Firmware Puerta Peatonal
 //
 // Ethernet + mDNS + HTTP server + LED/rele
 // Endpoints: GET /status, POST /open, GET /sensor
+//
+// fallos/07 (2026-10-05): el loop() SOLO maneja relé y botón. Todo lo que habla por la
+// red (latido, búsqueda del box, aviso del botón) corre en `tareaRed`, con timeouts
+// cortos: un box caído ya no traba la puerta. Ver lib/nexus-common/src/*.h.
 // ============================================================
 
 // --- Estado global ---
@@ -21,21 +29,24 @@ static bool servicesStarted = false;
 static String deviceMAC = "";
 static String deviceIP = "";
 
-// --- Mini-PC descubierto por mDNS ---
-static String miniPcIP = "";
-static int miniPcPort = NEXUS_MINI_PC_PORT;
+// --- Box (Mini-PC) al que se late: solo por mDNS, sin IP quemada ---
+static BusquedaDelBox busqueda(DISCOVERY_RETRY_MS, HEARTBEAT_TIMEOUT_COUNT);
+static portMUX_TYPE muxBusqueda = portMUX_INITIALIZER_UNLOCKED;
 
 // --- Heartbeat ---
 static unsigned long lastHeartbeat = 0;
-static int heartbeatFailures = 0;
-static bool fallbackMode = false;
 
-// --- Rele/LED ---
-static bool relayActive = false;
-static unsigned long relayOffAt = 0;
+// --- Rele/LED: /open corre en el hilo del servidor y el apagado en loop() ---
+static ReleTemporizado rele(RELAY_OPEN_DURATION_MS);
+static portMUX_TYPE muxRele = portMUX_INITIALIZER_UNLOCKED;
 
 // --- Boton de salida ---
 static bool lastButtonState = HIGH;  // Pull-up: HIGH = no presionado
+static volatile unsigned long pulsacionesBoton = 0;
+static volatile bool exitEventPendiente = false;   // lo manda tareaRed, no loop()
+
+// --- Diagnóstico ---
+static MedidorDeLoop medidorLoop;
 
 // --- OTA (Over-The-Air update via Ethernet) ---
 static bool otaRequested = false;
@@ -49,22 +60,42 @@ static AsyncWebServer* server = nullptr;
 
 // --- Rele/LED ---
 
-void relayActivate() {
-    digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? HIGH : LOW);
-    relayOffAt = millis() + RELAY_OPEN_DURATION_MS;
-    relayActive = true;
-    Serial.println("[RELAY] LED/Rele ON");
-}
-
-void relayDeactivate() {
-    digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? LOW : HIGH);
-    relayActive = false;
-    Serial.println("[RELAY] LED/Rele OFF");
+// Enciende o ALARGA la apertura. Devuelve true si estaba apagado.
+bool relayActivate() {
+    portENTER_CRITICAL(&muxRele);
+    bool encender = rele.activar(millis());
+    if (encender) digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? HIGH : LOW);
+    portEXIT_CRITICAL(&muxRele);
+    Serial.println(encender ? "[RELAY] ON" : "[RELAY] apertura alargada");
+    return encender;
 }
 
 void relayTick() {
-    if (relayActive && millis() >= relayOffAt) {
-        relayDeactivate();
+    portENTER_CRITICAL(&muxRele);
+    bool apagar = rele.debeApagar(millis());
+    if (apagar) digitalWrite(RELAY_PIN, RELAY_ACTIVE_HIGH ? LOW : HIGH);
+    portEXIT_CRITICAL(&muxRele);
+    if (apagar) Serial.println("[RELAY] OFF");
+}
+
+bool relayIsActive() {
+    portENTER_CRITICAL(&muxRele);
+    bool activo = rele.activo();
+    portEXIT_CRITICAL(&muxRele);
+    return activo;
+}
+
+const char* motivoDeReinicio() {
+    switch (esp_reset_reason()) {
+        case ESP_RST_POWERON:  return "encendido";
+        case ESP_RST_SW:       return "software";
+        case ESP_RST_PANIC:    return "panico";
+        case ESP_RST_INT_WDT:
+        case ESP_RST_TASK_WDT:
+        case ESP_RST_WDT:      return "watchdog";
+        case ESP_RST_BROWNOUT: return "bajo_voltaje";
+        case ESP_RST_EXT:      return "externo";
+        default:               return "otro";
     }
 }
 
@@ -77,24 +108,40 @@ void handleStatus(AsyncWebServerRequest* request) {
     doc["tipo"] = NEXUS_DEVICE_TYPE;
     doc["firmware"] = NEXUS_FIRMWARE_VERSION;
     doc["uptime_seconds"] = millis() / 1000;
-    doc["relay_active"] = relayActive;
+    doc["relay_active"] = relayIsActive();
     doc["door_sensor"] = digitalRead(DOOR_SENSOR_PIN) == LOW ? "closed" : "open";
     doc["ethernet"] = ethConnected;
+
+    // Diagnóstico (fallos/07): el box lo lee y lo deja en su log.
+    JsonObject diag = doc["diag"].to<JsonObject>();
+    portENTER_CRITICAL(&muxBusqueda);
+    String destino = busqueda.tieneDestino() ? String(busqueda.ip()) + ":" + busqueda.puerto() : String("");
+    int fallos = busqueda.fallos();
+    bool fallback = busqueda.enFallback();
+    portEXIT_CRITICAL(&muxBusqueda);
+    diag["mini_pc"] = destino;
+    diag["fallos_latido"] = fallos;
+    diag["fallback"] = fallback;
+    diag["loop_max_ms"] = medidorLoop.maximoMs();
+    diag["loop_max_hace_s"] = (millis() - medidorLoop.cuandoMs()) / 1000;
+    portENTER_CRITICAL(&muxRele);
+    diag["activaciones_rele"] = rele.activaciones();
+    portEXIT_CRITICAL(&muxRele);
+    diag["pulsaciones_boton"] = pulsacionesBoton;
+    diag["motivo_reinicio"] = motivoDeReinicio();
 
     String response;
     serializeJson(doc, response);
     request->send(200, "application/json", response);
 }
 
+// Con el relé activo ya NO responde 409: alarga la apertura (fallos/07). Antes, la orden
+// de la segunda persona se descartaba y el relé se apagaba justo cuando iba a pasar.
 void handleOpen(AsyncWebServerRequest* request) {
-    if (relayActive) {
-        request->send(409, "application/json",
-            "{\"error\":\"already_open\",\"message\":\"Ya esta activo\"}");
-        return;
-    }
-    relayActivate();
-    request->send(200, "application/json",
-        "{\"success\":true,\"duration_ms\":3000,\"message\":\"LED/Rele activado\"}");
+    bool encendio = relayActivate();
+    request->send(200, "application/json", encendio
+        ? "{\"success\":true,\"duration_ms\":3000,\"message\":\"LED/Rele activado\"}"
+        : "{\"success\":true,\"duration_ms\":3000,\"message\":\"Apertura alargada\",\"alargada\":true}");
 }
 
 void handleSensor(AsyncWebServerRequest* request) {
@@ -212,26 +259,32 @@ void onEthEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
 
 // --- Descubrimiento mDNS del Mini-PC ---
 
+// "" si todavía no se conoce el box: sin IP quemada, sin box no se late.
 String getMiniPcBaseUrl() {
-    if (miniPcIP.length() > 0) {
-        return String("http://") + miniPcIP + ":" + miniPcPort;
-    }
-    return String("http://") + NEXUS_MINI_PC_IP + ":" + NEXUS_MINI_PC_PORT;
+    portENTER_CRITICAL(&muxBusqueda);
+    String url = busqueda.tieneDestino()
+        ? String("http://") + busqueda.ip() + ":" + busqueda.puerto() : String("");
+    portEXIT_CRITICAL(&muxBusqueda);
+    return url;
 }
 
+// Solo desde tareaRed: MDNS.queryService bloquea ~3 s.
 void discoverMiniPc() {
     Serial.println("[mDNS] Buscando Mini-PC (_nexusminipc._tcp)...");
     int n = MDNS.queryService("_nexusminipc", "_tcp");
+    String ip = n > 0 ? MDNS.IP(0).toString() : String("");
+    int puerto = n > 0 ? MDNS.port(0) : 0;
+    portENTER_CRITICAL(&muxBusqueda);
+    busqueda.buscado(millis());
+    if (n > 0) busqueda.encontrado(ip.c_str(), puerto);
+    portEXIT_CRITICAL(&muxBusqueda);
     if (n > 0) {
-        miniPcIP = MDNS.IP(0).toString();
-        miniPcPort = MDNS.port(0);
         Serial.print("[mDNS] Mini-PC encontrado: ");
-        Serial.print(miniPcIP);
+        Serial.print(ip);
         Serial.print(":");
-        Serial.println(miniPcPort);
+        Serial.println(puerto);
     } else {
-        Serial.print("[mDNS] No encontrado, usando fallback: ");
-        Serial.println(NEXUS_MINI_PC_IP);
+        Serial.println("[mDNS] No encontrado; se reintenta en 60 s");
     }
 }
 
@@ -240,12 +293,16 @@ void discoverMiniPc() {
 void sendExitEvent() {
     if (!ethHasIP) return;
 
+    String base = getMiniPcBaseUrl();
+    if (base.length() == 0) return;
+
     HTTPClient http;
-    String url = getMiniPcBaseUrl() + "/api/esp32/exit-event";
+    String url = base + "/api/esp32/exit-event";
 
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
-    http.setTimeout(3000);
+    http.setConnectTimeout(HTTP_CONNECT_TIMEOUT_MS);
+    http.setTimeout(HTTP_TIMEOUT_MS);
 
     JsonDocument doc;
     doc["esp32_id"] = deviceMAC;
@@ -272,11 +329,10 @@ void checkExitButton() {
     bool currentState = digitalRead(EXIT_BUTTON_PIN);
     // Detectar flanco: HIGH → LOW (presionado)
     if (lastButtonState == HIGH && currentState == LOW) {
-        if (!relayActive) {
-            Serial.println("[BTN] Boton de salida presionado — abriendo puerta");
-            relayActivate();
-            sendExitEvent();
-        }
+        Serial.println("[BTN] Boton de salida presionado — abriendo puerta");
+        relayActivate();                 // también alarga si ya estaba abierta
+        pulsacionesBoton++;
+        exitEventPendiente = true;       // el aviso al box lo manda tareaRed
     }
     lastButtonState = currentState;
 }
@@ -285,15 +341,22 @@ void checkExitButton() {
 
 void sendHeartbeat() {
     if (!ethHasIP) return;
+    String base = getMiniPcBaseUrl();
+    if (base.length() == 0) return;        // sin box conocido: tareaRed lo sigue buscando
 
     HTTPClient http;
-    String url = getMiniPcBaseUrl() + "/api/esp32/status";
+    String url = base + "/api/esp32/status";
 
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
+    http.setConnectTimeout(HTTP_CONNECT_TIMEOUT_MS);
+    http.setTimeout(HTTP_TIMEOUT_MS);
 
     JsonDocument doc;
     doc["esp32_id"] = deviceMAC;
+    portENTER_CRITICAL(&muxBusqueda);
+    bool fallbackMode = busqueda.enFallback();
+    portEXIT_CRITICAL(&muxBusqueda);
     doc["status"] = fallbackMode ? "fallback" : "online";
     doc["door_state"] = digitalRead(DOOR_SENSOR_PIN) == LOW ? "closed" : "open";
     doc["uptime_seconds"] = millis() / 1000;
@@ -305,31 +368,44 @@ void sendHeartbeat() {
     int httpCode = http.POST(body);
     http.end();
 
+    portENTER_CRITICAL(&muxBusqueda);
+    if (httpCode == 200) busqueda.latidoOk();
+    else busqueda.latidoFallido(millis());
+    int fallos = busqueda.fallos();
+    portEXIT_CRITICAL(&muxBusqueda);
+
     if (httpCode == 200) {
-        if (heartbeatFailures > 0) {
-            Serial.print("[HB] Recuperado tras ");
-            Serial.print(heartbeatFailures);
-            Serial.println(" fallos");
-        }
-        heartbeatFailures = 0;
-        if (fallbackMode) {
-            fallbackMode = false;
-            Serial.println("[HB] Saliendo de modo FALLBACK");
-        }
+        if (fallbackMode) Serial.println("[HB] Recuperado: saliendo de FALLBACK");
     } else {
-        heartbeatFailures++;
         Serial.print("[HB] Fallo #");
-        Serial.print(heartbeatFailures);
+        Serial.print(fallos);
         Serial.print(" (HTTP ");
         Serial.print(httpCode);
-        Serial.println(")");
+        Serial.println(") — si sigue, se vuelve a buscar el box cada 60 s");
+    }
+}
 
-        if (heartbeatFailures >= HEARTBEAT_TIMEOUT_COUNT && !fallbackMode) {
-            fallbackMode = true;
-            Serial.println("[HB] === MODO FALLBACK ACTIVADO ===");
-            // Re-descubrir Mini-PC por si cambió de IP
-            discoverMiniPc();
+// --- Tarea de red: todo lo que puede bloquear, fuera de loop() (fallos/07) ---
+
+void tareaRed(void* /*param*/) {
+    for (;;) {
+        if (ethHasIP) {
+            bool buscar;
+            portENTER_CRITICAL(&muxBusqueda);
+            buscar = busqueda.debeBuscar(millis());
+            portEXIT_CRITICAL(&muxBusqueda);
+            if (buscar) discoverMiniPc();
+
+            if (exitEventPendiente) {
+                exitEventPendiente = false;
+                sendExitEvent();
+            }
+            if (millis() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
+                lastHeartbeat = millis();
+                sendHeartbeat();
+            }
         }
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -368,8 +444,9 @@ void startNetworkServices() {
     Serial.print("[HTTP] Puerto ");
     Serial.println(NEXUS_ESP32_PORT);
 
-    // Descubrir Mini-PC por mDNS (sin IP hardcodeada)
-    discoverMiniPc();
+    // Latido, búsqueda del box y aviso del botón: en su propia tarea (fallos/07).
+    // La primera búsqueda la hace tareaRed apenas arranca.
+    xTaskCreatePinnedToCore(tareaRed, "red", 8192, NULL, 1, NULL, 0);
 
     servicesStarted = true;
     Serial.println("\n===== LISTO =====");
@@ -403,6 +480,7 @@ void setup() {
 }
 
 void loop() {
+    medidorLoop.vuelta(millis());
     if (ethHasIP && !servicesStarted) {
         startNetworkServices();
     }
@@ -414,12 +492,6 @@ void loop() {
         otaRequested = false;
         delay(500);  // Dar tiempo a que la respuesta HTTP se envíe
         performOTA();
-    }
-
-    // Heartbeat al Mini-PC cada HEARTBEAT_INTERVAL_MS
-    if (servicesStarted && millis() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS) {
-        lastHeartbeat = millis();
-        sendHeartbeat();
     }
 
     delay(10);

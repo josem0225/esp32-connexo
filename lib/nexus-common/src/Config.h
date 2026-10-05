@@ -6,11 +6,10 @@
 
 // --- Identificacion ---
 #define NEXUS_DEVICE_TYPE     "puerta-peatonal"
-#define NEXUS_FIRMWARE_VERSION "1.1.0"
+#define NEXUS_FIRMWARE_VERSION "1.2.0"
 
 // --- Red ---
 #define NEXUS_USE_DHCP        true     // true = DHCP, false = IP estatica
-#define NEXUS_MINI_PC_IP      "192.168.2.19"
 #define NEXUS_MINI_PC_PORT    8000
 #define NEXUS_ESP32_PORT      80
 
@@ -27,6 +26,9 @@
 // --- Heartbeat ---
 #define HEARTBEAT_INTERVAL_MS 5000   // 5 segundos
 #define HEARTBEAT_TIMEOUT_COUNT 3    // 3 fallos = modo fallback (15s)
+#define DISCOVERY_RETRY_MS    60000  // sin box o en fallback: volver a buscarlo cada 60 s (fallos/07)
+#define HTTP_CONNECT_TIMEOUT_MS 800  // un box caído no puede trabar nada (fallos/07)
+#define HTTP_TIMEOUT_MS       1000
 
 // --- Rele electroiman ---
 #define RELAY_PIN             2      // WT32-ETH01: GPIO2
