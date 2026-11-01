@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexo Controller v1 — Guia de Conexiones de Campo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',sans-serif; background:#f4f4f5; color:#1a1a1a; line-height:1.6; }
+  .page { max-width:1300px; margin:0 auto; background:#fff; }
+  @media print { body { background:#fff; } .page { max-width:100%; } .no-print { display:none; } }
+
+  /* Header */
+  .header { background:#1a1a1a; padding:32px 48px; text-align:center; }
+  .header h1 { font-family:'Montserrat',sans-serif; font-weight:800; font-size:24px; color:#fff; margin-bottom:4px; }
+  .header p { font-size:13px; color:#888; letter-spacing:2px; text-transform:uppercase; }
+  .header .rev { display:inline-block; background:#E84038; color:#fff; font-size:11px; font-weight:700; padding:2px 10px; border-radius:4px; margin-top:8px; }
+  .accent-line { height:4px; background:#E84038; }
+
+  /* Content */
+  .content { padding:32px 48px; }
+  h2 { font-family:'Montserrat',sans-serif; font-weight:700; font-size:20px; color:#1a1a1a; margin:32px 0 16px 0; padding-bottom:8px; border-bottom:2px solid #E84038; }
+  h2:first-child { margin-top:0; }
+  h3 { font-size:16px; font-weight:700; margin:24px 0 8px 0; color:#1a1a1a; }
+
+  /* Warning boxes */
+  .warn { background:#fef3c7; border-left:4px solid #f59e0b; padding:12px 16px; margin:12px 0; border-radius:0 6px 6px 0; font-size:14px; }
+  .warn strong { color:#92400e; }
+  .danger { background:#fee2e2; border-left:4px solid #E84038; padding:12px 16px; margin:12px 0; border-radius:0 6px 6px 0; font-size:14px; }
+  .danger strong { color:#991b1b; }
+  .ok { background:#dcfce7; border-left:4px solid #22c55e; padding:12px 16px; margin:12px 0; border-radius:0 6px 6px 0; font-size:14px; }
+  .ok strong { color:#166534; }
+
+  /* Connector cards */
+  .conn-card { border:1px solid #e5e7eb; border-radius:8px; margin:16px 0; overflow:hidden; }
+  .conn-header { display:flex; align-items:center; gap:12px; padding:12px 16px; font-weight:700; font-size:15px; }
+  .conn-header.power { background:#fef3c7; border-bottom:1px solid #fde68a; }
+  .conn-header.input { background:#dbeafe; border-bottom:1px solid #bfdbfe; }
+  .conn-header.output { background:#fee2e2; border-bottom:1px solid #fecaca; }
+  .conn-header.data { background:#e0e7ff; border-bottom:1px solid #c7d2fe; }
+  .conn-header.module { background:#d1fae5; border-bottom:1px solid #a7f3d0; }
+  .conn-body { padding:16px; }
+  .conn-label { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; background:#1a1a1a; color:#fff; padding:2px 8px; border-radius:4px; }
+
+  /* Pin tables */
+  table { width:100%; border-collapse:collapse; margin:8px 0; font-size:14px; }
+  th { background:#f9fafb; text-align:left; padding:8px 12px; font-weight:600; border-bottom:2px solid #e5e7eb; }
+  td { padding:8px 12px; border-bottom:1px solid #f3f4f6; }
+  .pin-num { font-family:'JetBrains Mono',monospace; font-weight:700; text-align:center; width:50px; }
+  .signal { font-family:'JetBrains Mono',monospace; font-size:13px; }
+
+  /* Board SVG */
+  .board-container { margin:24px 0; text-align:center; overflow-x:auto; overflow-y:auto; max-height:none; }
+
+  /* Notes */
+  .note { font-size:13px; color:#6b7280; margin:4px 0; }
+
+  /* Footer */
+  .footer { background:#1a1a1a; padding:16px 48px; text-align:center; }
+  .footer p { font-size:12px; color:#6b7280; }
+
+  /* Connector type legend */
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin:16px 0; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:13px; }
+  .legend-dot { width:12px; height:12px; border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <h1>Connexo Controller v1</h1>
+  <p>Guia de conexiones de campo</p>
+  <span class="rev">REV A &mdash; 2026-11</span>
+</div>
+<div class="accent-line"></div>
+
+<div class="content">
+
+<!-- ============================================================ -->
+<h2>Diagrama del Board (130 x 100 mm)</h2>
+
+<div class="board-container">
+<svg viewBox="0 0 1300 950" width="1300" height="950" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <!-- Screw head radial gradient (3D look) -->
+    <radialGradient id="scrHead" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#e0e0e0"/>
+      <stop offset="40%" stop-color="#b0b0b0"/>
+      <stop offset="80%" stop-color="#707070"/>
+      <stop offset="100%" stop-color="#505050"/>
+    </radialGradient>
+    <!-- Pin hole gradient -->
+    <radialGradient id="pinHole" cx="50%" cy="40%">
+      <stop offset="0%" stop-color="#080808"/>
+      <stop offset="60%" stop-color="#222"/>
+      <stop offset="100%" stop-color="#444"/>
+    </radialGradient>
+    <!-- Gold pin post -->
+    <linearGradient id="goldPin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e8d060"/>
+      <stop offset="50%" stop-color="#c0a030"/>
+      <stop offset="100%" stop-color="#a08020"/>
+    </linearGradient>
+    <!-- JST connector gradient -->
+    <linearGradient id="jstBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe066"/>
+      <stop offset="100%" stop-color="#d4a010"/>
+    </linearGradient>
+    <!-- Red highlight for J13 pin2 -->
+    <radialGradient id="scrHeadRed" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#ff8080"/>
+      <stop offset="40%" stop-color="#E84038"/>
+      <stop offset="80%" stop-color="#b02020"/>
+      <stop offset="100%" stop-color="#801010"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ==================== PCB BOARD ==================== -->
+  <rect x="100" y="60" width="1100" height="780" rx="8" fill="#2d8a4e" stroke="#1a5c32" stroke-width="3"/>
+  <!-- Solder mask texture lines (subtle) -->
+  <line x1="100" y1="200" x2="1200" y2="200" stroke="#2a8248" stroke-width="0.5" opacity="0.4"/>
+  <line x1="100" y1="400" x2="1200" y2="400" stroke="#2a8248" stroke-width="0.5" opacity="0.4"/>
+  <line x1="100" y1="600" x2="1200" y2="600" stroke="#2a8248" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Mounting holes (4 corners) -->
+  <circle cx="135" cy="95" r="10" fill="none" stroke="#aaa" stroke-width="1.5"/><circle cx="135" cy="95" r="4" fill="#ccc"/>
+  <circle cx="1165" cy="95" r="10" fill="none" stroke="#aaa" stroke-width="1.5"/><circle cx="1165" cy="95" r="4" fill="#ccc"/>
+  <circle cx="135" cy="805" r="10" fill="none" stroke="#aaa" stroke-width="1.5"/><circle cx="135" cy="805" r="4" fill="#ccc"/>
+  <circle cx="1165" cy="805" r="10" fill="none" stroke="#aaa" stroke-width="1.5"/><circle cx="1165" cy="805" r="4" fill="#ccc"/>
+
+  <!-- Silkscreen branding -->
+  <text x="170" y="720" font-size="22" fill="#a3e635" font-weight="800" opacity="0.4" transform="rotate(-90,170,720)">CONNEXO v1</text>
+
+  <!-- ==================== J3 BARREL JACK 12V (top edge) ==================== -->
+  <rect x="240" y="62" width="80" height="50" rx="5" fill="#333" stroke="#555" stroke-width="2"/>
+  <!-- Barrel hole -->
+  <circle cx="280" cy="87" r="14" fill="#555" stroke="#444" stroke-width="1.5"/>
+  <circle cx="280" cy="87" r="6" fill="#333" stroke="#222" stroke-width="1"/>
+  <text x="280" y="130" text-anchor="middle" font-size="13" fill="#fde68a" font-weight="700">J3 - 12V IN</text>
+  <text x="280" y="146" text-anchor="middle" font-size="10" fill="#ccc">Barrel Jack 5.5x2.1</text>
+  <text x="280" y="160" text-anchor="middle" font-size="9" fill="#aaa">centro=+12V  anillo=GND</text>
+  <!-- Arrow from top -->
+  <line x1="280" y1="38" x2="280" y2="60" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="280" y="34" text-anchor="middle" font-size="9" fill="#fbbf24">12V DC IN</text>
+
+  <!-- ==================== J4 BORNERA 2P (top edge, right of J3) ==================== -->
+  <rect x="380" y="64" width="90" height="42" rx="4" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+  <!-- Pin 1: +12V - screw head -->
+  <circle cx="410" cy="85" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="403" y1="85" x2="417" y2="85" stroke="#666" stroke-width="1.5"/>
+  <line x1="410" y1="78" x2="410" y2="92" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole below screw -->
+  <rect x="404" y="96" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: GND - screw head -->
+  <circle cx="450" cy="85" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="443" y1="85" x2="457" y2="85" stroke="#666" stroke-width="1.5"/>
+  <line x1="450" y1="78" x2="450" y2="92" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole below screw -->
+  <rect x="444" y="96" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="430" y="57" text-anchor="middle" font-size="12" fill="#fde68a" font-weight="700">J4 - 12V alt</text>
+  <text x="410" y="122" text-anchor="middle" font-size="9" fill="#fbbf24" font-weight="700">1: +12V</text>
+  <text x="450" y="122" text-anchor="middle" font-size="9" fill="#aaa" font-weight="600">2: GND</text>
+  <!-- Cable entry arrows pointing up (toward board edge) -->
+  <line x1="410" y1="50" x2="410" y2="64" stroke="#fbbf24" stroke-width="1.5"/>
+  <polygon points="410,64 406,58 414,58" fill="#fbbf24"/>
+  <line x1="450" y1="50" x2="450" y2="64" stroke="#888" stroke-width="1.5"/>
+  <polygon points="450,64 446,58 454,58" fill="#888"/>
+
+  <!-- ==================== U4 BUCK + L1 (internal components) ==================== -->
+  <rect x="600" y="90" width="80" height="36" rx="4" fill="#444" stroke="#666" stroke-width="1.5"/>
+  <text x="640" y="113" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">U4 BUCK 12V-5V</text>
+  <rect x="720" y="82" width="60" height="60" rx="5" fill="#555" stroke="#777" stroke-width="1.5"/>
+  <text x="750" y="118" text-anchor="middle" font-size="12" fill="#fff" font-weight="600">L1</text>
+
+  <!-- ==================== U1 LDO ==================== -->
+  <rect x="390" y="180" width="60" height="24" rx="3" fill="#444" stroke="#666" stroke-width="1"/>
+  <text x="420" y="196" text-anchor="middle" font-size="9" fill="#fff" font-weight="600">U1 LDO 3.3V</text>
+
+  <!-- ==================== J7 PIN HEADER 1x6 PROG (horizontal, rot=0, left of J5) ==================== -->
+  <rect x="130" y="275" width="156" height="20" rx="3" fill="#222" stroke="#888" stroke-width="2"/>
+  <text x="208" y="268" text-anchor="middle" font-size="13" fill="#c7d2fe" font-weight="700">J7 PROG</text>
+  <!-- Pin 1: GND - gold post (leftmost) -->
+  <rect x="138" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="141" y="306" text-anchor="middle" font-size="8" fill="#777" font-weight="600">1</text>
+  <text x="141" y="316" text-anchor="middle" font-size="7" fill="#777">GND</text>
+  <!-- Pin 2: TX -->
+  <rect x="162" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="165" y="306" text-anchor="middle" font-size="8" fill="#60a5fa" font-weight="600">2</text>
+  <text x="165" y="316" text-anchor="middle" font-size="7" fill="#60a5fa">TX</text>
+  <!-- Pin 3: RX -->
+  <rect x="186" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="189" y="306" text-anchor="middle" font-size="8" fill="#60a5fa" font-weight="600">3</text>
+  <text x="189" y="316" text-anchor="middle" font-size="7" fill="#60a5fa">RX</text>
+  <!-- Pin 4: IO0 -->
+  <rect x="210" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="213" y="306" text-anchor="middle" font-size="8" fill="#f59e0b" font-weight="600">4</text>
+  <text x="213" y="316" text-anchor="middle" font-size="7" fill="#f59e0b">IO0</text>
+  <!-- Pin 5: EN -->
+  <rect x="234" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="237" y="306" text-anchor="middle" font-size="8" fill="#f59e0b" font-weight="600">5</text>
+  <text x="237" y="316" text-anchor="middle" font-size="7" fill="#f59e0b">EN</text>
+  <!-- Pin 6: +5V -->
+  <rect x="258" y="279" width="6" height="12" rx="1.5" fill="url(#goldPin)" stroke="#a08020" stroke-width="0.5"/>
+  <text x="261" y="306" text-anchor="middle" font-size="8" fill="#22c55e" font-weight="600">6</text>
+  <text x="261" y="316" text-anchor="middle" font-size="7" fill="#22c55e">+5V</text>
+
+  <!-- ==================== SW1 DIP SWITCH (near J5) ==================== -->
+  <rect x="220" y="398" width="28" height="36" rx="4" fill="#111" stroke="#666" stroke-width="1.5"/>
+  <rect x="226" y="404" width="16" height="10" rx="2" fill="#333" stroke="#555" stroke-width="1"/>
+  <rect x="226" y="418" width="16" height="10" rx="2" fill="#333" stroke="#555" stroke-width="1"/>
+  <text x="234" y="450" text-anchor="middle" font-size="10" fill="#c7d2fe" font-weight="700">SW1</text>
+  <text x="234" y="464" text-anchor="middle" font-size="9" fill="#aaa">FLASH</text>
+
+  <!-- ==================== J5 PIN SOCKET 1x13 ESP32 fila A (center-left, vertical) ==================== -->
+  <rect x="290" y="218" width="22" height="340" rx="3" fill="#111" stroke="#555" stroke-width="2"/>
+  <text x="301" y="210" text-anchor="middle" font-size="14" fill="#d1fae5" font-weight="700">J5</text>
+  <text x="301" y="574" text-anchor="middle" font-size="9" fill="#d1fae5">ESP32 fila A</text>
+  <!-- Pin 1: EN -->
+  <rect x="295" y="228" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="237" text-anchor="end" font-size="9" fill="#d1fae5" font-weight="600">1 EN</text>
+  <!-- Pin 2: GND -->
+  <rect x="295" y="252" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="261" text-anchor="end" font-size="9" fill="#777">2 GND</text>
+  <!-- Pin 3: nc -->
+  <rect x="295" y="276" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="285" text-anchor="end" font-size="9" fill="#555">3 nc</text>
+  <!-- Pin 4: EN -->
+  <rect x="295" y="300" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="309" text-anchor="end" font-size="9" fill="#d1fae5" font-weight="600">4 EN</text>
+  <!-- Pin 5: IO32 -->
+  <rect x="295" y="324" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="333" text-anchor="end" font-size="9" fill="#60a5fa" font-weight="600">5 IO32</text>
+  <!-- Pin 6: SDA -->
+  <rect x="295" y="348" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="357" text-anchor="end" font-size="9" fill="#60a5fa" font-weight="600">6 SDA</text>
+  <!-- Pin 7: nc -->
+  <rect x="295" y="372" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="381" text-anchor="end" font-size="9" fill="#555">7 nc</text>
+  <!-- Pin 8: SCL -->
+  <rect x="295" y="396" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="405" text-anchor="end" font-size="9" fill="#60a5fa" font-weight="600">8 SCL</text>
+  <!-- Pin 9: GND -->
+  <rect x="295" y="420" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="429" text-anchor="end" font-size="9" fill="#777">9 GND</text>
+  <!-- Pin 10: nc -->
+  <rect x="295" y="444" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="453" text-anchor="end" font-size="9" fill="#555">10 nc</text>
+  <!-- Pin 11: GND -->
+  <rect x="295" y="468" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="477" text-anchor="end" font-size="9" fill="#777">11 GND</text>
+  <!-- Pin 12: +5V -->
+  <rect x="295" y="492" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="501" text-anchor="end" font-size="9" fill="#22c55e" font-weight="700">12 +5V</text>
+  <!-- Pin 13: nc -->
+  <rect x="295" y="516" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="282" y="525" text-anchor="end" font-size="9" fill="#555">13 nc</text>
+
+  <!-- ==================== J6 PIN SOCKET 1x13 ESP32 fila B (22.86mm right of J5) ==================== -->
+  <rect x="450" y="218" width="22" height="340" rx="3" fill="#111" stroke="#555" stroke-width="2"/>
+  <text x="461" y="210" text-anchor="middle" font-size="14" fill="#d1fae5" font-weight="700">J6</text>
+  <text x="461" y="574" text-anchor="middle" font-size="9" fill="#d1fae5">ESP32 fila B</text>
+  <!-- Pin 1: TX -->
+  <rect x="455" y="228" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="237" font-size="9" fill="#60a5fa" font-weight="600">1 TX</text>
+  <!-- Pin 2: RX -->
+  <rect x="455" y="252" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="261" font-size="9" fill="#60a5fa" font-weight="600">2 RX</text>
+  <!-- Pin 3: IO0 -->
+  <rect x="455" y="276" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="285" font-size="9" fill="#f59e0b" font-weight="600">3 IO0</text>
+  <!-- Pin 4: GND -->
+  <rect x="455" y="300" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="309" font-size="9" fill="#777">4 GND</text>
+  <!-- Pin 5: nc -->
+  <rect x="455" y="324" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="333" font-size="9" fill="#555">5 nc</text>
+  <!-- Pin 6: nc -->
+  <rect x="455" y="348" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="357" font-size="9" fill="#555">6 nc</text>
+  <!-- Pin 7: nc -->
+  <rect x="455" y="372" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="381" font-size="9" fill="#555">7 nc</text>
+  <!-- Pin 8: IO14(BTN) -->
+  <rect x="455" y="396" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="405" font-size="9" fill="#60a5fa" font-weight="600">8 IO14(BTN)</text>
+  <!-- Pin 9: nc -->
+  <rect x="455" y="420" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="429" font-size="9" fill="#555">9 nc</text>
+  <!-- Pin 10: IO35(NT) -->
+  <rect x="455" y="444" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="453" font-size="9" fill="#60a5fa" font-weight="600">10 IO35(NT)</text>
+  <!-- Pin 11: IO4(SENSOR) -->
+  <rect x="455" y="468" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="477" font-size="9" fill="#60a5fa" font-weight="600">11 IO4(SENSOR)</text>
+  <!-- Pin 12: IO2(RELAY) -->
+  <rect x="455" y="492" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="501" font-size="9" fill="#E84038" font-weight="700">12 IO2(RELAY)</text>
+  <!-- Pin 13: GND -->
+  <rect x="455" y="516" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="480" y="525" font-size="9" fill="#777">13 GND</text>
+
+  <!-- ==================== ESP32 MODULE OVERLAY ==================== -->
+  <rect x="310" y="230" width="140" height="140" rx="5" fill="#1a1a1a" stroke="#E84038" stroke-width="2" opacity="0.85"/>
+  <text x="380" y="290" text-anchor="middle" font-size="15" fill="#fff" font-weight="700">WT32-ETH01</text>
+  <text x="380" y="310" text-anchor="middle" font-size="10" fill="#aaa">(enchufar por encima)</text>
+  <!-- Ethernet RJ45 on top of ESP32 module -->
+  <rect x="340" y="194" width="80" height="34" rx="4" fill="#333" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="380" y="216" text-anchor="middle" font-size="11" fill="#0ea5e9" font-weight="600">ETHERNET RJ45</text>
+  <text x="380" y="188" text-anchor="middle" font-size="9" fill="#6b7280">cable sale por aqui</text>
+
+  <!-- ==================== J8 PIN SOCKET 1x4 RFID/Audio (right of J6) ==================== -->
+  <rect x="620" y="260" width="20" height="114" rx="3" fill="#222" stroke="#888" stroke-width="2"/>
+  <text x="650" y="254" font-size="13" fill="#a5b4fc" font-weight="700">J8</text>
+  <text x="650" y="268" font-size="10" fill="#a5b4fc">RFID/Audio</text>
+  <!-- Pin 1: 3.3V -->
+  <rect x="624" y="272" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="648" y="281" font-size="9" fill="#22c55e" font-weight="700">1 3.3V</text>
+  <!-- Pin 2: GND -->
+  <rect x="624" y="298" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="648" y="307" font-size="9" fill="#777">2 GND</text>
+  <!-- Pin 3: SDA(IO33) -->
+  <rect x="624" y="324" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="648" y="333" font-size="9" fill="#60a5fa" font-weight="600">3 SDA(IO33)</text>
+  <!-- Pin 4: SCL(IO17) -->
+  <rect x="624" y="350" width="12" height="8" rx="1.5" fill="url(#pinHole)"/>
+  <text x="648" y="359" font-size="9" fill="#60a5fa" font-weight="600">4 SCL(IO17)</text>
+
+  <!-- ==================== LEFT EDGE CONNECTORS ==================== -->
+
+  <!-- ===== J11 BORNERA 2P - Sensor magnetico (left edge) ===== -->
+  <rect x="102" y="270" width="70" height="42" rx="4" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+  <!-- Pin 1: SENSOR - screw head -->
+  <circle cx="122" cy="291" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="115" y1="291" x2="129" y2="291" stroke="#666" stroke-width="1.5"/>
+  <line x1="122" y1="284" x2="122" y2="298" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole -->
+  <rect x="116" y="302" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: GND - screw head -->
+  <circle cx="152" cy="291" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="145" y1="291" x2="159" y2="291" stroke="#666" stroke-width="1.5"/>
+  <line x1="152" y1="284" x2="152" y2="298" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole -->
+  <rect x="146" y="302" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="137" y="262" text-anchor="middle" font-size="12" fill="#93c5fd" font-weight="700">J11 Sensor mag.</text>
+  <text x="122" y="326" text-anchor="middle" font-size="9" fill="#60a5fa" font-weight="700">1: SENSOR</text>
+  <text x="152" y="326" text-anchor="middle" font-size="9" fill="#aaa" font-weight="600">2: GND</text>
+  <!-- Cable entry arrow pointing left -->
+  <line x1="80" y1="283" x2="102" y2="283" stroke="#60a5fa" stroke-width="1.5"/>
+  <polygon points="102,283 96,279 96,287" fill="#60a5fa"/>
+  <line x1="80" y1="299" x2="102" y2="299" stroke="#888" stroke-width="1.5"/>
+  <polygon points="102,299 96,295 96,303" fill="#888"/>
+
+  <!-- ===== J12 BORNERA 2P - Boton salida (left edge, below J11) ===== -->
+  <rect x="102" y="380" width="70" height="42" rx="4" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+  <!-- Pin 1: BTN - screw head -->
+  <circle cx="122" cy="401" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="115" y1="401" x2="129" y2="401" stroke="#666" stroke-width="1.5"/>
+  <line x1="122" y1="394" x2="122" y2="408" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole -->
+  <rect x="116" y="412" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: GND - screw head -->
+  <circle cx="152" cy="401" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="145" y1="401" x2="159" y2="401" stroke="#666" stroke-width="1.5"/>
+  <line x1="152" y1="394" x2="152" y2="408" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole -->
+  <rect x="146" y="412" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="137" y="372" text-anchor="middle" font-size="12" fill="#93c5fd" font-weight="700">J12 Boton salida</text>
+  <text x="122" y="436" text-anchor="middle" font-size="9" fill="#60a5fa" font-weight="700">1: BTN</text>
+  <text x="152" y="436" text-anchor="middle" font-size="9" fill="#aaa" font-weight="600">2: GND</text>
+  <!-- Cable entry arrows pointing left -->
+  <line x1="80" y1="393" x2="102" y2="393" stroke="#60a5fa" stroke-width="1.5"/>
+  <polygon points="102,393 96,389 96,397" fill="#60a5fa"/>
+  <line x1="80" y1="409" x2="102" y2="409" stroke="#888" stroke-width="1.5"/>
+  <polygon points="102,409 96,405 96,413" fill="#888"/>
+
+  <!-- ===== J13 BORNERA 3P - No-touch (left edge, below J12) ===== -->
+  <rect x="102" y="500" width="100" height="42" rx="4" fill="#3b82f6" stroke="#E84038" stroke-width="2.5"/>
+  <!-- Pin 1: +12V - screw head -->
+  <circle cx="122" cy="521" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="115" y1="521" x2="129" y2="521" stroke="#666" stroke-width="1.5"/>
+  <line x1="122" y1="514" x2="122" y2="528" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole -->
+  <rect x="116" y="532" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: GND+NO (RED HIGHLIGHT!) - screw head -->
+  <circle cx="152" cy="521" r="12" fill="url(#scrHeadRed)" stroke="#E84038" stroke-width="2.5"/>
+  <line x1="145" y1="521" x2="159" y2="521" stroke="#fff" stroke-width="1.5"/>
+  <line x1="152" y1="514" x2="152" y2="528" stroke="#fff" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole (red border!) -->
+  <rect x="146" y="532" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#E84038" stroke-width="1.5"/>
+  <!-- Pin 3: COM - screw head -->
+  <circle cx="182" cy="521" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="175" y1="521" x2="189" y2="521" stroke="#666" stroke-width="1.5"/>
+  <line x1="182" y1="514" x2="182" y2="528" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 3: wire entry hole -->
+  <rect x="176" y="532" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="152" y="490" text-anchor="middle" font-size="12" fill="#93c5fd" font-weight="700">J13 No-touch</text>
+  <text x="122" y="556" text-anchor="middle" font-size="9" fill="#fbbf24" font-weight="700">1: +12V</text>
+  <text x="152" y="556" text-anchor="middle" font-size="8" fill="#E84038" font-weight="800">2: GND+NO</text>
+  <text x="152" y="568" text-anchor="middle" font-size="8" fill="#E84038" font-weight="800">(2 cables!)</text>
+  <text x="182" y="556" text-anchor="middle" font-size="9" fill="#60a5fa" font-weight="700">3: COM</text>
+  <!-- Cable entry arrows pointing left -->
+  <line x1="80" y1="513" x2="102" y2="513" stroke="#fbbf24" stroke-width="1.5"/>
+  <polygon points="102,513 96,509 96,517" fill="#fbbf24"/>
+  <line x1="80" y1="521" x2="102" y2="521" stroke="#E84038" stroke-width="2"/>
+  <polygon points="102,521 96,517 96,525" fill="#E84038"/>
+  <line x1="80" y1="529" x2="102" y2="529" stroke="#60a5fa" stroke-width="1.5"/>
+  <polygon points="102,529 96,525 96,533" fill="#60a5fa"/>
+
+  <!-- PC817 optocoupler near J13 -->
+  <rect x="220" y="510" width="50" height="28" rx="3" fill="#444" stroke="#666" stroke-width="1"/>
+  <text x="245" y="528" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">PC817</text>
+
+  <!-- ==================== U2 ULN2003A ==================== -->
+  <rect x="380" y="490" width="80" height="30" rx="4" fill="#444" stroke="#666" stroke-width="1.5"/>
+  <text x="420" y="510" text-anchor="middle" font-size="10" fill="#fff" font-weight="600">ULN2003A</text>
+
+  <!-- ==================== K1 RELAY (Electroiman) ==================== -->
+  <rect x="680" y="380" width="110" height="80" rx="6" fill="#2563eb" stroke="#1d4ed8" stroke-width="2.5"/>
+  <text x="735" y="416" text-anchor="middle" font-size="18" fill="#fff" font-weight="700">K1</text>
+  <text x="735" y="440" text-anchor="middle" font-size="12" fill="#bfdbfe">Electroiman</text>
+
+  <!-- D4 flyback diode -->
+  <rect x="810" y="415" width="28" height="12" rx="2" fill="#555" stroke="#777" stroke-width="1"/>
+  <text x="824" y="442" text-anchor="middle" font-size="9" fill="#aaa">D4</text>
+
+  <!-- ==================== K2 RELAY (Talanquera) ==================== -->
+  <rect x="680" y="520" width="110" height="80" rx="6" fill="#2563eb" stroke="#1d4ed8" stroke-width="2.5"/>
+  <text x="735" y="556" text-anchor="middle" font-size="18" fill="#fff" font-weight="700">K2</text>
+  <text x="735" y="580" text-anchor="middle" font-size="12" fill="#bfdbfe">Talanquera</text>
+
+  <!-- ==================== RIGHT EDGE CONNECTORS ==================== -->
+
+  <!-- ===== J9 BORNERA 2P - Electroiman (right edge) ===== -->
+  <rect x="1030" y="390" width="70" height="42" rx="4" fill="#3b82f6" stroke="#dc2626" stroke-width="2.5"/>
+  <!-- Pin 1: EM_OUT - screw head -->
+  <circle cx="1050" cy="411" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="1043" y1="411" x2="1057" y2="411" stroke="#666" stroke-width="1.5"/>
+  <line x1="1050" y1="404" x2="1050" y2="418" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole -->
+  <rect x="1044" y="422" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: GND - screw head -->
+  <circle cx="1080" cy="411" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="1073" y1="411" x2="1087" y2="411" stroke="#666" stroke-width="1.5"/>
+  <line x1="1080" y1="404" x2="1080" y2="418" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole -->
+  <rect x="1074" y="422" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="1065" y="382" text-anchor="middle" font-size="12" fill="#fca5a5" font-weight="700">J9 Electroiman</text>
+  <text x="1050" y="446" text-anchor="middle" font-size="9" fill="#E84038" font-weight="700">1: EM_OUT</text>
+  <text x="1080" y="446" text-anchor="middle" font-size="9" fill="#aaa" font-weight="600">2: GND</text>
+  <!-- Cable entry arrows pointing right -->
+  <line x1="1100" y1="403" x2="1122" y2="403" stroke="#E84038" stroke-width="1.5"/>
+  <polygon points="1100,403 1106,399 1106,407" fill="#E84038"/>
+  <line x1="1100" y1="419" x2="1122" y2="419" stroke="#888" stroke-width="1.5"/>
+  <polygon points="1100,419 1106,415 1106,423" fill="#888"/>
+
+  <!-- ===== J10 BORNERA 2P - Talanquera (right edge, below J9) ===== -->
+  <rect x="1030" y="530" width="70" height="42" rx="4" fill="#3b82f6" stroke="#dc2626" stroke-width="2.5"/>
+  <!-- Pin 1: TAL_COM - screw head -->
+  <circle cx="1050" cy="551" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="1043" y1="551" x2="1057" y2="551" stroke="#666" stroke-width="1.5"/>
+  <line x1="1050" y1="544" x2="1050" y2="558" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 1: wire entry hole -->
+  <rect x="1044" y="562" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Pin 2: TAL_NO - screw head -->
+  <circle cx="1080" cy="551" r="12" fill="url(#scrHead)" stroke="#555" stroke-width="1.5"/>
+  <line x1="1073" y1="551" x2="1087" y2="551" stroke="#666" stroke-width="1.5"/>
+  <line x1="1080" y1="544" x2="1080" y2="558" stroke="#666" stroke-width="1.5"/>
+  <!-- Pin 2: wire entry hole -->
+  <rect x="1074" y="562" width="12" height="8" rx="1" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
+  <!-- Labels -->
+  <text x="1065" y="522" text-anchor="middle" font-size="12" fill="#fca5a5" font-weight="700">J10 Talanquera</text>
+  <text x="1050" y="586" text-anchor="middle" font-size="9" fill="#E84038" font-weight="700">1: TAL_COM</text>
+  <text x="1080" y="586" text-anchor="middle" font-size="9" fill="#aaa" font-weight="600">2: TAL_NO</text>
+  <!-- Cable entry arrows pointing right -->
+  <line x1="1100" y1="543" x2="1122" y2="543" stroke="#E84038" stroke-width="1.5"/>
+  <polygon points="1100,543 1106,539 1106,547" fill="#E84038"/>
+  <line x1="1100" y1="559" x2="1122" y2="559" stroke="#888" stroke-width="1.5"/>
+  <polygon points="1100,559 1106,555 1106,563" fill="#888"/>
+
+  <!-- ==================== BOTTOM EDGE CONNECTORS ==================== -->
+
+  <!-- ===== J16 JST XH 2P (Distribution) ===== -->
+  <rect x="200" y="750" width="56" height="32" rx="4" fill="url(#jstBody)" stroke="#d97706" stroke-width="2"/>
+  <!-- Tab/keyway on top -->
+  <rect x="214" y="746" width="28" height="6" rx="2" fill="#d4a010" stroke="#b8860b" stroke-width="1"/>
+  <!-- Pin 1: +12V -->
+  <circle cx="218" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="218" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">1</text>
+  <!-- Pin 2: GND -->
+  <circle cx="242" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="242" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">2</text>
+  <!-- Labels -->
+  <text x="230" y="744" text-anchor="middle" font-size="11" fill="#fde68a" font-weight="700">J16</text>
+  <text x="218" y="796" text-anchor="middle" font-size="8" fill="#fbbf24" font-weight="700">12V</text>
+  <text x="242" y="796" text-anchor="middle" font-size="8" fill="#aaa" font-weight="600">GND</text>
+
+  <!-- ===== J17 JST XH 2P (Distribution) ===== -->
+  <rect x="300" y="750" width="56" height="32" rx="4" fill="url(#jstBody)" stroke="#d97706" stroke-width="2"/>
+  <rect x="314" y="746" width="28" height="6" rx="2" fill="#d4a010" stroke="#b8860b" stroke-width="1"/>
+  <!-- Pin 1: +12V -->
+  <circle cx="318" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="318" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">1</text>
+  <!-- Pin 2: GND -->
+  <circle cx="342" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="342" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">2</text>
+  <!-- Labels -->
+  <text x="330" y="744" text-anchor="middle" font-size="11" fill="#fde68a" font-weight="700">J17</text>
+  <text x="318" y="796" text-anchor="middle" font-size="8" fill="#fbbf24" font-weight="700">12V</text>
+  <text x="342" y="796" text-anchor="middle" font-size="8" fill="#aaa" font-weight="600">GND</text>
+
+  <!-- ===== J18 JST XH 2P (Distribution) ===== -->
+  <rect x="400" y="750" width="56" height="32" rx="4" fill="url(#jstBody)" stroke="#d97706" stroke-width="2"/>
+  <rect x="414" y="746" width="28" height="6" rx="2" fill="#d4a010" stroke="#b8860b" stroke-width="1"/>
+  <!-- Pin 1: +12V -->
+  <circle cx="418" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="418" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">1</text>
+  <!-- Pin 2: GND -->
+  <circle cx="442" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="442" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">2</text>
+  <!-- Labels -->
+  <text x="430" y="744" text-anchor="middle" font-size="11" fill="#fde68a" font-weight="700">J18</text>
+  <text x="418" y="796" text-anchor="middle" font-size="8" fill="#fbbf24" font-weight="700">12V</text>
+  <text x="442" y="796" text-anchor="middle" font-size="8" fill="#aaa" font-weight="600">GND</text>
+
+  <!-- ===== J19 JST XH 2P (Distribution) ===== -->
+  <rect x="500" y="750" width="56" height="32" rx="4" fill="url(#jstBody)" stroke="#d97706" stroke-width="2"/>
+  <rect x="514" y="746" width="28" height="6" rx="2" fill="#d4a010" stroke="#b8860b" stroke-width="1"/>
+  <!-- Pin 1: +12V -->
+  <circle cx="518" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="518" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">1</text>
+  <!-- Pin 2: GND -->
+  <circle cx="542" cy="766" r="7" fill="#b45309" stroke="#92400e" stroke-width="1"/>
+  <text x="542" y="769" text-anchor="middle" font-size="6" fill="#fff" font-weight="700">2</text>
+  <!-- Labels -->
+  <text x="530" y="744" text-anchor="middle" font-size="11" fill="#fde68a" font-weight="700">J19</text>
+  <text x="518" y="796" text-anchor="middle" font-size="8" fill="#fbbf24" font-weight="700">12V</text>
+  <text x="542" y="796" text-anchor="middle" font-size="8" fill="#aaa" font-weight="600">GND</text>
+
+  <!-- Distribution label -->
+  <text x="380" y="820" text-anchor="middle" font-size="11" fill="#fde68a" font-weight="600">DIST 12V+GND -- todos: Pin1=+12V Pin2=GND (JST XH polarizado)</text>
+
+  <!-- ===== J1 USB-C (bottom edge, NO USAR) ===== -->
+  <rect x="700" y="764" width="64" height="26" rx="6" fill="#888" stroke="#555" stroke-width="2"/>
+  <rect x="718" y="770" width="28" height="14" rx="7" fill="#666" stroke="#555" stroke-width="1"/>
+  <text x="732" y="808" text-anchor="middle" font-size="11" fill="#E84038" font-weight="700">J1 USB-C</text>
+  <!-- Red X -->
+  <line x1="706" y1="820" x2="758" y2="820" stroke="#E84038" stroke-width="3"/>
+  <text x="732" y="838" text-anchor="middle" font-size="12" fill="#E84038" font-weight="700">NO USAR (invertido)</text>
+
+  <!-- ==================== SIGNAL TRACE HINTS ==================== -->
+  <!-- J11 -> GPIO4 trace hint -->
+  <line x1="172" y1="291" x2="220" y2="291" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+  <!-- J12 -> GPIO14 trace hint -->
+  <line x1="172" y1="401" x2="220" y2="401" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+  <!-- J13 -> PC817 trace hint -->
+  <line x1="202" y1="521" x2="220" y2="524" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>
+  <!-- ULN -> K1 trace hint -->
+  <line x1="460" y1="505" x2="680" y2="420" stroke="#E84038" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <!-- ULN -> K2 trace hint -->
+  <line x1="460" y1="510" x2="680" y2="560" stroke="#E84038" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <!-- K1 -> J9 trace hint -->
+  <line x1="790" y1="420" x2="1030" y2="411" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <!-- K2 -> J10 trace hint -->
+  <line x1="790" y1="560" x2="1030" y2="551" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+  <!-- ==================== LEGEND BOX ==================== -->
+  <rect x="870" y="700" width="300" height="120" rx="6" fill="#1a3a2a" stroke="#2d5a3e" stroke-width="2"/>
+  <text x="890" y="722" font-size="12" fill="#fff" font-weight="700">Leyenda</text>
+  <rect x="890" y="732" width="14" height="10" rx="2" fill="#fbbf24"/><text x="910" y="742" font-size="10" fill="#ccc">Alimentacion (12V)</text>
+  <rect x="890" y="750" width="14" height="10" rx="2" fill="#3b82f6"/><text x="910" y="760" font-size="10" fill="#ccc">Entrada campo (sensor/boton)</text>
+  <rect x="890" y="768" width="14" height="10" rx="2" fill="#f87171"/><text x="910" y="778" font-size="10" fill="#ccc">Salida potencia (rele)</text>
+  <rect x="890" y="786" width="14" height="10" rx="2" fill="#a5b4fc"/><text x="910" y="796" font-size="10" fill="#ccc">Datos / modulo</text>
+  <rect x="890" y="804" width="14" height="10" rx="2" fill="#d1fae5"/><text x="910" y="814" font-size="10" fill="#ccc">ESP32 socket</text>
+
+  <!-- ==================== DIMENSIONS ==================== -->
+  <text x="650" y="870" text-anchor="middle" font-size="12" fill="#6b7280">130 mm</text>
+  <line x1="100" y1="862" x2="1200" y2="862" stroke="#6b7280" stroke-width="0.5" stroke-dasharray="6,3"/>
+  <line x1="100" y1="858" x2="100" y2="866" stroke="#6b7280" stroke-width="1"/>
+  <line x1="1200" y1="858" x2="1200" y2="866" stroke="#6b7280" stroke-width="1"/>
+
+  <!-- Vertical dimension -->
+  <text x="1240" y="460" text-anchor="middle" font-size="12" fill="#6b7280" transform="rotate(90,1240,460)">100 mm</text>
+  <line x1="1220" y1="60" x2="1220" y2="840" stroke="#6b7280" stroke-width="0.5" stroke-dasharray="6,3"/>
+  <line x1="1216" y1="60" x2="1224" y2="60" stroke="#6b7280" stroke-width="1"/>
+  <line x1="1216" y1="840" x2="1224" y2="840" stroke="#6b7280" stroke-width="1"/>
+
+  <!-- Title inside SVG -->
+  <text x="650" y="900" text-anchor="middle" font-size="13" fill="#6b7280" font-weight="600">Vista superior (top side) -- Connexo Controller v1 Rev A</text>
+  <text x="650" y="918" text-anchor="middle" font-size="11" fill="#E84038" font-weight="700">J13 Pin 2 en ROJO = meter 2 cables (GND + NO del sensor no-touch)</text>
+  <text x="650" y="938" text-anchor="middle" font-size="10" fill="#6b7280">Lineas punteadas = trazas internas (no son cables)</text>
+</svg>
+</div>
+
+<p class="note">Vista superior (top side). Cada conector muestra sus pines con senal y numero. J13 Pin 2 en rojo = meter 2 cables (GND + NO). Las lineas punteadas indican trazas internas del PCB, no cables.</p>
+
+<!-- ============================================================ -->
+<h2>1. Alimentacion — J3 (Barrel Jack 12V)</h2>
+
+<div class="conn-card">
+  <div class="conn-header power">
+    <span class="conn-label">J3</span>
+    Barrel Jack 5.5x2.1mm — Entrada principal 12V DC
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">Centro</td><td class="signal">+12V</td><td>Positivo de la fuente 12V DC</td></tr>
+      <tr><td class="pin-num">Anillo</td><td class="signal">GND</td><td>Negativo de la fuente 12V DC</td></tr>
+    </table>
+    <div class="ok"><strong>Fuente recomendada:</strong> Adaptador 12V DC, 3A minimo, conector 5.5x2.1mm centro-positivo.</div>
+    <p class="note">Esta es la unica alimentacion que necesita la placa. De aqui salen los 12V para reles y el buck converter genera 5V y 3.3V automaticamente.</p>
+  </div>
+</div>
+
+<div class="conn-card">
+  <div class="conn-header power">
+    <span class="conn-label">J4</span>
+    Bornera 2P — Entrada 12V alternativa (backup)
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">+12V</td><td>Positivo de la fuente 12V DC</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>Negativo de la fuente 12V DC</td></tr>
+    </table>
+    <p class="note">Usar solo si no se usa J3. NO conectar ambos a la vez con fuentes diferentes.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Electroiman — J9 (Bornera 2P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header output">
+    <span class="conn-label">J9</span>
+    Bornera 2P — Chapa electromagnetica / Electroiman
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">EM_OUT</td><td>Cable + del electroiman</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>Cable - del electroiman</td></tr>
+    </table>
+    <div class="warn"><strong>Fail-safe:</strong> K1 usa contacto NC (normalmente cerrado). Si se corta la energia, el electroiman se desenergiza y la puerta se abre. Esto es un requisito de evacuacion.</div>
+    <p class="note">GPIO2 controla el rele K1 via ULN2003A. RELAY_ACTIVE_HIGH=true en el firmware.</p>
+    <p class="note">El diodo D4 (SS34) protege contra el pico de voltaje cuando el rele corta la bobina del electroiman.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Talanquera / Motor — J10 (Bornera 2P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header output">
+    <span class="conn-label">J10</span>
+    Bornera 2P — Talanquera (contacto seco)
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">TAL_COM</td><td>COM de la talanquera</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">TAL_NO</td><td>NO de la talanquera</td></tr>
+    </table>
+    <div class="ok"><strong>Contacto seco aislado:</strong> Este rele (K2) entrega un contacto libre de voltaje. Funciona con cualquier controlador de talanquera sin importar su voltaje (12V, 24V, 220V). El rele simplemente cierra un contacto.</div>
+    <p class="note">GPIO32 controla el rele K2 via ULN2003A. Capacidad maxima: 15A @ 250VAC.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Sensor Magnetico (estado puerta) — J11 (Bornera 2P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header input">
+    <span class="conn-label">J11</span>
+    Bornera 2P — Sensor magnetico de puerta
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">SENSOR</td><td>Un cable del sensor</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>El otro cable (sin polaridad)</td></tr>
+    </table>
+    <p class="note">El sensor magnetico es un contacto seco (reed switch). No tiene polaridad — da igual cual cable va en cual pin.</p>
+    <p class="note">Puerta cerrada = contacto cerrado = GPIO4 lee LOW. Puerta abierta = contacto abierto = GPIO4 lee HIGH.</p>
+    <p class="note">Proteccion integrada: R7 (1k) limita corriente, R8 (10k) pull-up, C8 (100nF) antirrebote.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. Boton de Salida — J12 (Bornera 2P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header input">
+    <span class="conn-label">J12</span>
+    Bornera 2P — Boton de salida (REX)
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">BTN</td><td>Un cable del boton</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>El otro cable (sin polaridad)</td></tr>
+    </table>
+    <p class="note">Boton normalmente abierto (NA/NO). No tiene polaridad. Al presionar, cierra contacto a GND y GPIO14 baja a LOW.</p>
+    <p class="note">Proteccion integrada: R9 (1k) limita corriente, R10 (10k) pull-up, C9 (100nF) antirrebote.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Sensor No-Touch (infrarrojo 12V) — J13 (Bornera 3P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header input">
+    <span class="conn-label">J13</span>
+    Bornera 3P — Sensor no-touch infrarrojo
+  </div>
+  <div class="conn-body">
+    <p style="font-weight:600; margin-bottom:8px;">El no-touch tiene 5 cables: 12V, GND, COM, NC, NO</p>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">+12V</td><td>Cable 12V del no-touch</td></tr>
+      <tr><td class="pin-num" style="color:#E84038; font-weight:800;">2</td><td class="signal" style="color:#E84038; font-weight:800;">GND+NO (2 cables!)</td><td style="color:#E84038; font-weight:700;">Meter GND y NO juntos en este borne</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">COM</td><td>Cable COM del no-touch</td></tr>
+    </table>
+    <div class="warn"><strong>2 cables en Pin 2:</strong> Meter GND y NO juntos en el mismo borne. Apretar bien el tornillo para que ambos hagan contacto.</div>
+    <div class="danger"><strong>NC queda suelto.</strong> No conectar NC a nada. Aislar la punta con cinta si es necesario.</div>
+    <p class="note"><strong>Como funciona:</strong> Cuando alguien pone la mano &rarr; rele interno cierra COM con NO &rarr; NT_IN se conecta a GND &rarr; corriente pasa por el optoacoplador PC817 &rarr; GPIO35 detecta la senal.</p>
+    <p class="note">Proteccion integrada: optoacoplador PC817 aisla los 12V del ESP32. Si se cruzan cables, muere el PC817 ($0.05), no el ESP32.</p>
+    <div class="ok"><strong>Fix en v2:</strong> J13 tendra 4-5 pines para que cada cable tenga su borne individual.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Lector RFID PN532 — J8 (Pin Socket 4P)</h2>
+
+<div class="conn-card">
+  <div class="conn-header data">
+    <span class="conn-label">J8</span>
+    Pin Socket 1x4 — Modulo PN532 (I2C) o DFPlayer Mini (audio)
+  </div>
+  <div class="conn-body">
+    <h3>Opcion A: Lector RFID PN532</h3>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">3.3V</td><td>VCC del PN532</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>GND del PN532</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">SDA (IO33)</td><td>SDA del PN532</td></tr>
+      <tr><td class="pin-num">4</td><td class="signal">SCL (IO17)</td><td>SCL del PN532</td></tr>
+    </table>
+    <div class="warn"><strong>Importante:</strong> Configurar el PN532 en modo I2C (DIP switches del modulo). Alimentacion es 3.3V, NO 5V.</div>
+
+    <h3>Opcion B: Audio / Perifoneo (DFPlayer Mini)</h3>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">3.3V</td><td>VCC del DFPlayer</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>GND del DFPlayer</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">IO33 (RX)</td><td>RX del DFPlayer</td></tr>
+      <tr><td class="pin-num">4</td><td class="signal">IO17 (TX)</td><td>TX del DFPlayer</td></tr>
+    </table>
+    <p class="note">Conectar parlante 8 ohm directo a SPK1/SPK2 del DFPlayer. MicroSD con MP3s (alarmas, confirmaciones).</p>
+
+    <div class="danger"><strong>Usar PN532 O DFPlayer, no ambos al tiempo.</strong> Son el mismo conector. Decidir por puerta.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>8. Modulo ESP32 (WT32-ETH01) — J5 + J6</h2>
+
+<div class="conn-card">
+  <div class="conn-header module">
+    <span class="conn-label">J5 + J6</span>
+    Pin Sockets 1x13 — Enchufar el modulo WT32-ETH01
+  </div>
+  <div class="conn-body">
+    <div class="ok"><strong>Solo enchufar.</strong> El modulo se inserta por encima de la placa en los dos sockets de 13 pines. El conector Ethernet (RJ45) queda apuntando hacia el borde superior de la placa.</div>
+    <div class="warn"><strong>Orientacion:</strong> El lado del RJ45 del modulo va hacia arriba (borde superior de la placa, donde estan J3 y J4). Verificar que pin 1 del modulo coincida con pin 1 de J5.</div>
+
+    <h3>J5 — Fila A (13 pines)</h3>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">EN</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">4</td><td class="signal">EN</td></tr>
+      <tr><td class="pin-num">5</td><td class="signal">IO32</td></tr>
+      <tr><td class="pin-num">6</td><td class="signal">SDA</td></tr>
+      <tr><td class="pin-num">7</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">8</td><td class="signal">SCL</td></tr>
+      <tr><td class="pin-num">9</td><td class="signal">GND</td></tr>
+      <tr><td class="pin-num">10</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">11</td><td class="signal">GND</td></tr>
+      <tr><td class="pin-num">12</td><td class="signal">+5V</td></tr>
+      <tr><td class="pin-num">13</td><td class="signal">nc</td></tr>
+    </table>
+
+    <h3>J6 — Fila B (13 pines)</h3>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">TX</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">RX</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">IO0</td></tr>
+      <tr><td class="pin-num">4</td><td class="signal">GND</td></tr>
+      <tr><td class="pin-num">5</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">6</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">7</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">8</td><td class="signal">IO14 (BTN)</td></tr>
+      <tr><td class="pin-num">9</td><td class="signal">nc</td></tr>
+      <tr><td class="pin-num">10</td><td class="signal">IO35 (NT)</td></tr>
+      <tr><td class="pin-num">11</td><td class="signal">IO4 (SENSOR)</td></tr>
+      <tr><td class="pin-num">12</td><td class="signal">IO2 (RELAY)</td></tr>
+      <tr><td class="pin-num">13</td><td class="signal">GND</td></tr>
+    </table>
+
+    <p class="note">El modulo queda elevado ~8.5mm sobre la placa. Los componentes SMD debajo caben sin problema.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>9. Programacion / Flash — J7 y SW1</h2>
+
+<div class="conn-card">
+  <div class="conn-header data">
+    <span class="conn-label">J7</span>
+    Pin Header 1x6 — Programador USB-Serial (CP2102/CH340)
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Conectar a</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">GND</td><td>GND del CP2102</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">TX</td><td>RXD del CP2102 (cruzado)</td></tr>
+      <tr><td class="pin-num">3</td><td class="signal">RX</td><td>TXD del CP2102 (cruzado)</td></tr>
+      <tr><td class="pin-num">4</td><td class="signal">IO0</td><td>No conectar (usar SW1)</td></tr>
+      <tr><td class="pin-num">5</td><td class="signal">EN</td><td>DTR (opcional)</td></tr>
+      <tr><td class="pin-num">6</td><td class="signal">+5V</td><td>5V (alimenta sin 12V)</td></tr>
+    </table>
+    <div class="warn"><strong>TX y RX cruzados:</strong> TX de la placa va a RXD del programador y viceversa. Siempre se cruzan.</div>
+  </div>
+</div>
+
+<div class="conn-card">
+  <div class="conn-header data">
+    <span class="conn-label">SW1</span>
+    DIP Switch — Modo Flash
+  </div>
+  <div class="conn-body">
+    <table>
+      <tr><th>Posicion</th><th>Estado</th><th>Uso</th></tr>
+      <tr><td><strong>OFF</strong> (normal)</td><td>GPIO0 libre</td><td>Operacion normal — el firmware corre</td></tr>
+      <tr><td><strong>ON</strong> (flash)</td><td>GPIO0 a GND</td><td>Modo bootloader — para flashear firmware nuevo</td></tr>
+    </table>
+    <p class="note"><strong>Para flashear:</strong> SW1 en ON &rarr; presionar reset (o reconectar energia) &rarr; subir firmware &rarr; SW1 en OFF &rarr; reset.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>10. Distribucion de Alimentacion — J16, J17, J18, J19</h2>
+
+<div class="conn-card">
+  <div class="conn-header power">
+    <span class="conn-label">J16 / J17 / J18 / J19</span>
+    JST XH 2P (x4) — Distribucion 12V + GND pareada
+  </div>
+  <div class="conn-body">
+    <p style="font-weight:600; margin-bottom:8px;">4 conectores identicos, cada uno lleva 12V y GND juntos:</p>
+    <table>
+      <tr><th class="pin-num">Pin</th><th>Senal</th><th>Nota</th></tr>
+      <tr><td class="pin-num">1</td><td class="signal">+12V</td><td>Todos iguales</td></tr>
+      <tr><td class="pin-num">2</td><td class="signal">GND</td><td>Todos iguales</td></tr>
+    </table>
+    <table>
+      <tr><th>Conector</th><th>Uso sugerido</th></tr>
+      <tr><td class="signal">J16</td><td>Alimentar Hikvision / dispositivo de acceso</td></tr>
+      <tr><td class="signal">J17</td><td>Alimentar camara</td></tr>
+      <tr><td class="signal">J18</td><td>Reserva</td></tr>
+      <tr><td class="signal">J19</td><td>Reserva</td></tr>
+    </table>
+    <div class="ok"><strong>Polarizados:</strong> JST XH no se puede conectar al reves. Un solo cable por periferico, sin empalmes.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>11. Conector USB-C — J1</h2>
+
+<div class="conn-card">
+  <div class="conn-header power">
+    <span class="conn-label">J1</span>
+    USB-C 6P — NO USAR en v1
+  </div>
+  <div class="conn-body">
+    <div class="danger"><strong>ERROR DE DISENO:</strong> El conector USB-C quedo orientado al reves. La entrada del cable apunta hacia adentro de la placa. Es imposible conectar un cable USB fisicamente. Ignorar este conector.</div>
+    <p class="note">La placa se alimenta por J3 (barrel jack 12V) y se programa por J7 (header). No se necesita USB-C.</p>
+    <p class="note">Corregido en v2.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>Resumen rapido de conexiones</h2>
+
+<table>
+  <tr><th>Conector</th><th>Tipo</th><th>Que conectar</th><th>GPIO</th></tr>
+  <tr><td class="signal">J3</td><td>Barrel jack</td><td>Fuente 12V DC 3A</td><td>—</td></tr>
+  <tr><td class="signal">J4</td><td>Bornera 2P</td><td>12V alternativa (backup)</td><td>—</td></tr>
+  <tr><td class="signal">J5 + J6</td><td>Pin socket 1x13</td><td>Enchufar WT32-ETH01</td><td>Todos</td></tr>
+  <tr><td class="signal">J7</td><td>Pin header 1x6</td><td>Programador CP2102</td><td>TX/RX/IO0/EN</td></tr>
+  <tr><td class="signal">J8</td><td>Pin socket 1x4</td><td>PN532 RFID o DFPlayer audio</td><td>IO33/IO17</td></tr>
+  <tr><td class="signal">J9</td><td>Bornera 2P</td><td>Electroiman (+, -)</td><td>GPIO2</td></tr>
+  <tr><td class="signal">J10</td><td>Bornera 2P</td><td>Talanquera (COM, NO)</td><td>GPIO32</td></tr>
+  <tr><td class="signal">J11</td><td>Bornera 2P</td><td>Sensor magnetico (cualquier orden)</td><td>GPIO4</td></tr>
+  <tr><td class="signal">J12</td><td>Bornera 2P</td><td>Boton de salida (cualquier orden)</td><td>GPIO14</td></tr>
+  <tr><td class="signal">J13</td><td>Bornera 3P</td><td>No-touch (12V, GND+NO, COM)</td><td>GPIO35</td></tr>
+  <tr><td class="signal">J16-J19</td><td>JST XH 2P (x4)</td><td>Distribucion 12V+GND pareada</td><td>—</td></tr>
+  <tr><td class="signal" style="color:#E84038">J1</td><td>USB-C</td><td style="color:#E84038">NO USAR (invertido)</td><td>—</td></tr>
+</table>
+
+</div>
+
+<div class="footer">
+  <p>NEXO GROUP SOLUTIONS S.A.S &middot; NIT 902.101.794-5 &middot; Bogota, Colombia</p>
+  <p>Connexo Controller v1 &mdash; Rev A &mdash; Noviembre 2026</p>
+</div>
+
+</div>
+</body>
+</html>
