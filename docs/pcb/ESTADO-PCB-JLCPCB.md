@@ -189,13 +189,49 @@ Cada puerta se configura segun necesidad:
 - Confirmacion audible de acceso concedido/denegado
 - Timbre de visitante
 
-## QA antes de ordenar
+## ERRORES CONFIRMADOS — v1 (placas ya fabricadas)
+
+### ERROR 1: J13 (no-touch) — solo 3 pines, necesita 4-5
+**Causa:** No se revisó el datasheet del sensor no-touch antes de diseñar.
+El no-touch tiene 5 cables: 12V, GND, COM, NC, NO. Es un contacto de relé,
+no una señal simple.
+
+J13 solo tiene 3 pines (12V, GND, NT_IN). Faltan mínimo COM y NO como
+pines separados.
+
+**Workaround v1:** Meter GND + NO en el mismo borne de J13 pin 2, y COM en
+pin 3. Funciona eléctricamente pero es sucio.
+
+**Fix v2:** Cambiar J13 de FP_TB3 (3P) a FP_TB4 (4P) o FP_TB5 (5P).
+Pines: 12V, GND, COM, NO, (NC opcional).
+
+### ERROR 2: J1 (USB-C) — orientacion invertida
+**Causa:** No se verificó la orientacion física del footprint. La entrada del
+cable USB apunta hacia dentro de la placa (hacia el relé) en vez de hacia
+el borde. Es imposible conectar un cable USB.
+
+**Workaround v1:** No usar J1. Alimentar por barrel jack (J3) y programar
+por J7 (header CP2102). La placa funciona al 100% sin USB-C.
+
+**Fix v2:** Rotar J1 180° en placement.py para que la entrada del cable
+apunte hacia el borde de la placa.
+
+### Leccion aprendida
+**REGLA PARA v2 en adelante:** ANTES de agregar cualquier conector al diseño:
+1. Leer el datasheet del dispositivo que se conecta (no-touch, lector, etc.)
+2. Contar TODOS los cables/pines que necesita
+3. Verificar orientación física del footprint (por dónde entra el cable)
+4. Imprimir Gerber 1:1 y probar físicamente con el conector real
+
+## QA antes de ordenar (actualizado)
 
 1. LCSC verificados: cada numero buscado en lcsc.com, NO inventado
 2. Envelope ESP32 validado en check_placement.py (zona X=139-164, Y=118-180)
 3. CPL usa Mid X, Mid Y (centro geometrico) — verificar al regenerar
-4. **PENDIENTE: imprimir Gerber 1:1 y poner WT32-ETH01 encima**
-5. Regenerar TODO tras cambios: schematic, PCB, Gerbers, BOM, CPL
+4. **OBLIGATORIO: imprimir Gerber 1:1 y poner cada conector encima**
+5. **OBLIGATORIO: revisar datasheet de CADA dispositivo externo antes de diseñar su conector**
+6. **OBLIGATORIO: verificar orientacion de conectores (por donde entra el cable)**
+7. Regenerar TODO tras cambios: schematic, PCB, Gerbers, BOM, CPL
 
 ## Precio estimado (solo componentes, 5 boards)
 - Capacitores 100uF: $9.39
